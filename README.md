@@ -723,11 +723,11 @@ http://127.0.0.1:8000/search?search=ramayana
 
 ## Output
 
-<img src="screenshots/Screenshot 2026-03-16 122500.png" width="900">
+<img src="screenshots/Screenshot 2026-03-16 122500.png" width="1000">
 
-<img src="screenshots/Screenshot 2026-03-16 122513.png" width="900">
+<img src="screenshots/Screenshot 2026-03-16 122513.png" width="1000">
 
-<img src="screenshots/Screenshot 2026-03-16 122540.png" width="900">
+<img src="screenshots/Screenshot 2026-03-16 122540.png" width="1000">
 
 ---
 
