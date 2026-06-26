@@ -1,248 +1,130 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Explorer Dashboard</title>
-
+    <title>Laravel Scout Explorer Search</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        body {
-            background: #0f172a;
-            overflow: hidden;
-        }
-
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
+<body class="bg-slate-50 text-slate-800">
 
-<body class="text-white">
-
-    <div class="flex h-screen overflow-hidden">
-
-        <!-- Sidebar -->
-        <div class="w-72 bg-slate-950 border-r border-slate-800 p-6 flex flex-col justify-between">
-
-            <div>
-
-                <!-- Logo -->
-                <div class="flex items-center gap-4 mb-12">
-
-                    <div class="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-2xl shadow-lg">
-                        🚀
-                    </div>
-
-                    <div>
-
-                        <h1 class="text-2xl font-black">
-                            Explorer
-                        </h1>
-
-                        <p class="text-slate-400 text-sm">
-                            Laravel Elasticsearch
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <!-- Stats -->
-                <div class="glass rounded-3xl p-6 mb-6">
-
-                    <p class="text-slate-400 mb-2">
-                        Total Posts
-                    </p>
-
-                    <h2 class="text-5xl font-black text-blue-400">
-                        {{ $posts->total() }}
-                    </h2>
-
-                </div>
-
-                <!-- Search -->
-                <form action="{{ route('posts.index') }}" method="GET" class="space-y-4">
-
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search posts..."
-                        class="w-full bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
-
-                    <button class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-bold transition">
-
-                        Search
-
-                    </button>
-
-                </form>
-
-                <!-- Create -->
-                <a href="{{ route('posts.create') }}"
-                    class="block text-center mt-5 bg-emerald-500 hover:bg-emerald-600 py-4 rounded-2xl font-bold transition">
-
-                    + Create Post
-
-                </a>
-
-            </div>
-
-            <!-- Footer -->
-            <div class="glass rounded-2xl p-4 text-center text-slate-400 text-sm">
-
-                Powered by Laravel Scout & Elasticsearch
-
-            </div>
-
+    <div class="max-w-6xl mx-auto p-6">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-black text-slate-900">ES EXPLORER</h1>
+            <a href="{{ route('posts.create') }}" class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-blue-700 transition">+ Create Post</a>
         </div>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        @if(session('success'))
+            <div class="mb-6 p-4 rounded-xl bg-green-100 border border-green-400 text-green-700 font-semibold">
+                {{ session('success') }}
+            </div>
+        @endif
 
-            <!-- Header -->
-            <div class="p-8 pb-4 flex items-center justify-between">
-
-                <div>
-
-                    <h1 class="text-4xl font-black mb-2">
-                        Dashboard
-                    </h1>
-
-                    <p class="text-slate-400">
-                        Manage and search posts professionally
-                    </p>
-
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8 relative">
+            <form action="{{ route('posts.index') }}" method="GET" class="flex gap-3">
+                <div class="relative flex-1">
+                    <input type="text" id="search-input" name="search" autocomplete="off" placeholder="Search posts..." value="{{ $search ?? '' }}" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500">
+                    <div id="autocomplete-box" class="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-50 hidden max-h-60 overflow-y-auto"></div>
                 </div>
-
-                @if(session('success'))
-
-                    <div class="bg-green-500/20 border border-green-500/20 text-green-300 px-6 py-3 rounded-2xl">
-                        {{ session('success') }}
-                    </div>
-
+                @if(!empty($category))
+                    <input type="hidden" name="category" value="{{ $category }}">
                 @endif
+                <button type="submit" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-slate-800 transition">Search</button>
+            </form>
+        </div>
 
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 h-fit">
+                <h3 class="font-bold text-sm text-slate-400 uppercase tracking-wider mb-4">Categories</h3>
+                <div class="space-y-2">
+                    <a href="/?search={{ $search ?? '' }}" class="flex justify-between items-center p-2 rounded-lg text-sm font-semibold {{ empty($category) ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50' }}">
+                        <span>All Categories</span>
+                    </a>
+                    @foreach($facets as $bucket)
+                        <a href="/?search={{ $search ?? '' }}&category={{ $bucket->category }}" class="flex justify-between items-center p-2 rounded-lg text-sm font-semibold {{ ($category ?? '') === $bucket->category ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50' }}">
+                            <span>{{ $bucket->category }}</span>
+                            <span class="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-bold">{{ $bucket->count }}</span>
+                        </a>
+                    @endforeach
+                </div>
             </div>
 
-            <!-- Posts Area -->
-            <div class="flex-1 overflow-hidden px-8">
-
-                <div
-                    class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 h-full overflow-y-auto pb-6 scrollbar-hide">
-
-                    @forelse($posts as $post)
-
-                        <!-- Card -->
-                        <div
-                            class="glass rounded-3xl p-6 flex flex-col justify-between h-[320px] hover:scale-[1.02] transition duration-300">
-
-                            <div>
-
-                                <!-- Top -->
-                                <div class="flex items-center justify-between mb-5">
-
-                                    <span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold">
-                                        POST #{{ $post->id }}
-                                    </span>
-
-                                    <span class="text-slate-500 text-sm">
-                                        {{ $post->created_at->diffForHumans() }}
-                                    </span>
-
-                                </div>
-
-                                <!-- Title -->
-                                <h2 class="text-2xl font-bold mb-4 line-clamp-1">
-                                    {{ $post->title }}
-                                </h2>
-
-                                <!-- Content -->
-                                <p class="text-slate-400 text-sm leading-relaxed">
-                                    {{ Str::limit($post->content, 120) }}
-                                </p>
-
-                            </div>
-
-                            <!-- Buttons -->
-                            <div class="flex gap-3 mt-6">
-
-                                <a href="{{ route('posts.edit', $post->id) }}"
-                                    class="w-full text-center bg-yellow-500 hover:bg-yellow-600 py-3 rounded-xl font-bold transition">
-
-                                    Edit
-
-                                </a>
-
-                                <form action="{{ route('posts.destroy', $post->id) }}" method="POST" class="w-full"
-                                    onsubmit="return confirm('Delete this post?')">
-
+            <div class="md:col-span-3 space-y-6">
+                @forelse($posts as $post)
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-md">{{ $post->category }}</span>
+                            <div class="flex gap-2">
+                                <a href="{{ route('posts.edit', $post->id) }}" class="text-xs text-yellow-600 hover:underline font-semibold">Edit</a>
+                                <form action="{{ route('posts.destroy', $post->id) }}" method="POST" onsubmit="return confirm('Delete this post?')">
                                     @csrf
                                     @method('DELETE')
-
-                                    <button class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold transition">
-
-                                        Delete
-
-                                    </button>
-
+                                    <button type="submit" class="text-xs text-red-600 hover:underline font-semibold">Delete</button>
                                 </form>
-
                             </div>
-
                         </div>
-
-                    @empty
-
-                        <!-- Empty State -->
-                        <div class="col-span-3 flex items-center justify-center">
-
-                            <div class="glass rounded-3xl p-16 text-center w-full">
-
-                                <div class="text-7xl mb-6">
-                                    🔍
-                                </div>
-
-                                <h2 class="text-3xl font-black mb-3">
-                                    No Posts Found
-                                </h2>
-
-                                <p class="text-slate-400">
-                                    Try another keyword
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                    @endforelse
-
-                </div>
-
-            </div>
-
-            <!-- Pagination -->
-            <div class="p-6 border-t border-slate-800 bg-slate-950/40">
-
-                <div class="flex justify-center">
-
-                    <div class="glass px-6 py-3 rounded-2xl">
-                        {{ $posts->links() }}
+                        <h2 class="text-xl font-bold text-slate-900 mt-3 mb-2 post-title">{{ $post->title }}</h2>
+                        <p class="text-slate-600 leading-relaxed post-content">{{ $post->content }}</p>
                     </div>
+                @empty
+                    <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium">No results found.</div>
+                @endforelse
 
+                <div class="pt-4">
+                    {{ $posts->links() }}
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-</body>
+    <script>
+        $(document).ready(function() {
+            let searchTerm = "{{ $search ?? '' }}";
+            if (searchTerm) {
+                let regex = new RegExp('(' + searchTerm + ')', 'gi');
+                $('.post-title, .post-content').each(function() {
+                    $(this).html($(this).html().replace(regex, '<mark class="bg-yellow-200 text-slate-900 p-0.5 rounded">$1</mark>'));
+                });
+            }
 
+            $('#search-input').on('input', function() {
+                let query = $(this).val();
+                if (query.length < 2) {
+                    $('#autocomplete-box').hide().html('');
+                    return;
+                }
+
+                $.ajax({
+                    url: "{{ route('posts.autocomplete') }}",
+                    method: "GET",
+                    data: { search: query },
+                    success: function(data) {
+                        let html = '';
+                        if (data.length > 0) {
+                            data.forEach(item => {
+                                html += `<div class="p-3 hover:bg-slate-50 cursor-pointer text-sm font-medium border-b border-slate-100 last:border-0 autocomplete-item" data-title="${item.title}">${item.title}</div>`;
+                            });
+                            $('#autocomplete-box').show().html(html);
+                        } else {
+                            $('#autocomplete-box').hide().html('');
+                        }
+                    }
+                });
+            });
+
+            $(document).on('click', '.autocomplete-item', function() {
+                $('#search-input').val($(this).data('title'));
+                $('#autocomplete-box').hide();
+                $(this).closest('form').submit();
+            });
+
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#search-input').length) {
+                    $('#autocomplete-box').hide();
+                }
+            });
+        });
+    </script>
+</body>
 </html>
